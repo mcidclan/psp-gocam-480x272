@@ -16,8 +16,9 @@
 PSP_MODULE_INFO("gocam", 0, 1, 0);
 PSP_MAIN_THREAD_ATTR(THREAD_ATTR_USER);
 
-#define VIDEO_MAX_BUFFER_SIZE  (4*8192)
-#define MAX_OUTPUT_FRAME_SIZE (512*272)
+#define UNCACHED_USER_SEG       0x40000000
+#define VIDEO_MAX_BUFFER_SIZE   (4*8192)
+#define MAX_OUTPUT_FRAME_SIZE   (512*272)
 
 static u8  buffer[MAX_OUTPUT_FRAME_SIZE] __attribute__((aligned(64)));
 static u32 FRAME_BUFFER[MAX_OUTPUT_FRAME_SIZE] __attribute__((aligned(64)));
@@ -58,10 +59,23 @@ void finish() {
   sceUtilityUnloadAvModule(PSP_AV_MODULE_AVCODEC);
 }
 
+int getVideoFrame() {
+  int retry = 10, res;
+  
+  while ((res = sceUsbCamReadVideoFrameBlocking(buffer, VIDEO_MAX_BUFFER_SIZE)) < 0) {
+    sceKernelDelayThread(10);
+    if (--retry <= 0) {
+      return -1;
+    }
+  };
+  return res;
+}
+
 int main() {
   init();
 
-  pspDebugScreenInitEx((void*)(0x40000000 | (u32)FRAME_BUFFER), PSP_DISPLAY_PIXEL_FORMAT_8888, 1);
+  pspDebugScreenInitEx((void*)(UNCACHED_USER_SEG | (u32)FRAME_BUFFER),
+    PSP_DISPLAY_PIXEL_FORMAT_8888, 1);
   pspDebugScreenEnableBackColor(0);
   
   int res;
@@ -82,7 +96,7 @@ int main() {
   param.evlevel         = PSP_USBCAM_EVLEVEL_0_0;
 
   SceCtrlData ctl;
-  while(!(ctl.Buttons & PSP_CTRL_HOME)) {
+  while (!(ctl.Buttons & PSP_CTRL_HOME)) {
     
     sceCtrlPeekBufferPositive(&ctl, 1);
     pspDebugScreenSetXY(0, 0);
@@ -103,27 +117,22 @@ int main() {
       }
       
       do {
-        pspDebugScreenSetXY(0, 0);
-        pspDebugScreenPrintf("running...\n");
-
         sceCtrlPeekBufferPositive(&ctl, 1);
 
-        u8 outOfUsb = 0;
-        while( (res = sceUsbCamReadVideoFrameBlocking(buffer, VIDEO_MAX_BUFFER_SIZE)) < 0) {
-          sceKernelDelayThread(10);
-          if (++outOfUsb > 10) {
-            goto out_of_usb;
-          }
-        };
-        
-        res = sceJpegDecodeMJpeg(buffer, res, (void*)(0x40000000 | (u32)FRAME_BUFFER), 0);
-        
-        sceDisplayWaitVblankStart();
-        scePowerTick(PSP_POWER_TICK_DISPLAY);
+        pspDebugScreenSetXY(0, 0);
+        pspDebugScreenPrintf("running...\n");
+       
+        if ((res = getVideoFrame()) >= 0) {
+          
+          sceJpegDecodeMJpeg(buffer, res, (void*)(UNCACHED_USER_SEG | (u32)FRAME_BUFFER), 0);
+          sceDisplayWaitVblankStart();
+          scePowerTick(PSP_POWER_TICK_DISPLAY);
+        } else {
+          
+          break;
+        }
+      } while (!(ctl.Buttons & PSP_CTRL_HOME));
       
-      } while(!(ctl.Buttons & PSP_CTRL_HOME));
-      
-      out_of_usb:
       sceUsbCamStopVideo();
     }
   }
