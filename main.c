@@ -118,18 +118,6 @@ int main() {
         
         res = sceJpegDecodeMJpeg(buffer, res, (void*)(0x40000000 | (u32)FRAME_BUFFER), 0);
         
-        // debug purpose
-        static int maxBufferSize = 0;
-        if (maxBufferSize < res) {
-          maxBufferSize = res;
-        }
-        pspDebugScreenSetXY(0, 0);
-        pspDebugScreenPrintf("max video buf size: %d   ", maxBufferSize);
-        if ((ctl.Buttons & PSP_CTRL_SELECT)) {
-          maxBufferSize = 0;
-        }
-        //
-        
         sceDisplayWaitVblankStart();
         scePowerTick(PSP_POWER_TICK_DISPLAY);
       
