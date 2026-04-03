@@ -1,19 +1,17 @@
-#include <pspsdk.h>
 #include <pspuser.h>
 #include <pspdisplay.h>
 #include <pspctrl.h>
-
-#include <psputility_usbmodules.h>
-#include <psputility_avmodules.h>
-
 #include <pspusb.h>
 #include <pspusbacc.h>
 #include <pspusbcam.h>
 #include <pspjpeg.h>
 #include <psppower.h>
+#include <psputility_usbmodules.h>
+#include <psputility_avmodules.h>
+
 #include <string.h>
 
-PSP_MODULE_INFO("gocam", 0, 1, 0);
+PSP_MODULE_INFO("gocam", 0, 1, 1);
 PSP_MAIN_THREAD_ATTR(THREAD_ATTR_USER);
 
 #define UNCACHED_USER_SEG       0x40000000
@@ -23,10 +21,6 @@ PSP_MAIN_THREAD_ATTR(THREAD_ATTR_USER);
 static u8  buffer[MAX_OUTPUT_FRAME_SIZE] __attribute__((aligned(64)));
 static u32 FRAME_BUFFER[MAX_OUTPUT_FRAME_SIZE] __attribute__((aligned(64)));
 static u8  work[128*1024] __attribute__((aligned(64)));
-
-void exitGame() {
-  sceKernelExitGame();
-}
 
 void init() {
   sceUtilityLoadUsbModule(PSP_USB_MODULE_ACC);
@@ -41,7 +35,7 @@ void init() {
   sceUsbActivate(PSP_USBCAM_PID);
   
   sceJpegInitMJpeg();
-  if (sceJpegCreateMJpeg(512, 272) < 0) { // make sure buffer with fit with the output stride
+  if (sceJpegCreateMJpeg(512, 272) < 0) { // making sure buffer width fits with the output stride
     sceKernelExitGame();
   }
 }

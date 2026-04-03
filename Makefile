@@ -2,7 +2,7 @@ TARGET = target
 OBJS = main.o
 
 INCDIR = ./include
-CFLAGS = -G0 -Os -Wall
+CFLAGS = -G0 -Os -Wall -Wextra -Werror 
 CXXFLAGS = $(CFLAGS) -fno-exceptions -fno-rtti
 ASFLAGS = $(CFLAGS)
 
